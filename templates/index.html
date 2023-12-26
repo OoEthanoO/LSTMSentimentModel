@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sentiment Predictor</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <form id="predict-form">
+        <textarea id="text-input"></textarea>
+    </form>
+    <div id="sentiment"></div>
+
+    <script>
+        $(document).ready(function() {
+            $('#text-input').on('input', function() {
+                var text = $(this).val();
+                $.ajax({
+                    url: '/predict',
+                    method: 'POST',
+                    data: {text: text},
+                    success: function(response) {
+                        $('#sentiment').text(response.sentiment);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
