@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Feedbacks</title>
+</head>
+<body>
+    <h1>Feedbacks</h1>
+    <ul>
+    {% for feedback in feedbacks %}
+        <li>{{ feedback.text }} should be {{ feedback.expected }} but it displays {{ feedback.displayed }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

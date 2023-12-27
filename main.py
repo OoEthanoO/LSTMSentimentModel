@@ -6,311 +6,25 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 import numpy as np
 from flask import Flask, request, jsonify, render_template
+from flask_sqlalchemy import SQLAlchemy
+import os
+from data import data
 
 app = Flask(__name__)
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'test.db')
+db = SQLAlchemy(app)
 
-data = [
-    ("I absolutely love this product!", "positive"),
-    ("The weather today is fantastic.", "positive"),
-    ("I had a wonderful time at the party.", "positive"),
-    ("The service at this restaurant is excellent.", "positive"),
-    ("I'm so grateful for your help.", "positive"),
-    ("I admire your hard work and dedication.", "positive"),
-    ("The movie was incredibly inspiring.", "positive"),
-    ("I'm feeling great about the upcoming project.", "positive"),
-    ("The staff was extremely helpful and friendly.", "positive"),
-    ("I appreciate your kindness.", "positive"),
-    ("The results were as expected.", "neutral"),
-    ("I will attend the meeting tomorrow.", "neutral"),
-    ("This book is about various topics.", "neutral"),
-    ("The situation seems stable for now.", "neutral"),
-    ("Please provide more information.", "neutral"),
-    ("The report contains statistical data.", "neutral"),
-    ("I'm considering different options.", "neutral"),
-    ("The speech covered multiple subjects.", "neutral"),
-    ("Today feels like an ordinary day.", "neutral"),
-    ("There are some points to discuss.", "neutral"),
-    ("I'm disappointed with the quality of service.", "negative"),
-    ("The experience was awful and frustrating.", "negative"),
-    ("I'm not satisfied with this product.", "negative"),
-    ("The customer support was rude and unhelpful.", "negative"),
-    ("I'm tired of these constant issues.", "negative"),
-    ("The movie was a complete waste of time.", "negative"),
-    ("I'm upset about the delay in delivery.", "negative"),
-    ("This is a terrible idea, and it won't work.", "negative"),
-    ("I'm feeling very discouraged by recent events.", "negative"),
-    ("The situation seems hopeless at the moment.", "negative"),
-    ("The concert was absolutely amazing!", "positive"),
-    ("I'm thrilled with the results of the experiment.", "positive"),
-    ("This new recipe is incredibly delicious.", "positive"),
-    ("The sunset view was breathtakingly beautiful.", "positive"),
-    ("I'm ecstatic about the opportunity ahead.", "positive"),
-    ("The teamwork on this project is exceptional.", "positive"),
-    ("I'm overjoyed by your thoughtful gesture.", "positive"),
-    ("The performance exceeded all expectations.", "positive"),
-    ("The vacation was truly relaxing and refreshing.", "positive"),
-    ("I'm impressed by your creativity and talent.", "positive"),
-    ("The situation seems quite balanced for now.", "neutral"),
-    ("I'll review the proposal later today.", "neutral"),
-    ("The discussion covered various aspects.", "neutral"),
-    ("Today's schedule appears manageable.", "neutral"),
-    ("The data analysis offers interesting insights.", "neutral"),
-    ("I'm observing the current trends closely.", "neutral"),
-    ("The lecture encompassed multiple viewpoints.", "neutral"),
-    ("The atmosphere feels somewhat routine.", "neutral"),
-    ("There's a need for further clarification.", "neutral"),
-    ("This decision involves several considerations.", "neutral"),
-    ("I'm frustrated with the lack of progress.", "negative"),
-    ("The service at this restaurant was abysmal.", "negative"),
-    ("I'm deeply disappointed with the product quality.", "negative"),
-    ("The customer service experience was appalling.", "negative"),
-    ("I'm exhausted by these continuous setbacks.", "negative"),
-    ("The movie failed to meet even basic expectations.", "negative"),
-    ("I'm irritated by the constant interruptions.", "negative"),
-    ("This plan is fundamentally flawed and impractical.", "negative"),
-    ("I'm feeling disheartened due to recent setbacks.", "negative"),
-    ("The current situation appears grim and concerning.", "negative"),
-    ("The new album is a masterpiece of creativity.", "positive"),
-    ("I'm thrilled with the progress we've made.", "positive"),
-    ("This art exhibition is truly awe-inspiring.", "positive"),
-    ("The sunrise was a magnificent spectacle.", "positive"),
-    ("I'm elated about the new job opportunity.", "positive"),
-    ("The customer service was remarkably helpful.", "positive"),
-    ("I'm grateful for your continuous support.", "positive"),
-    ("The event was an absolute delight to attend.", "positive"),
-    ("The spa day was incredibly relaxing and soothing.", "positive"),
-    ("I'm impressed by the efficiency of this process.", "positive"),
-    ("The current situation seems fairly stable.", "neutral"),
-    ("I'll review the document at a later time.", "neutral"),
-    ("The discussion encompassed various viewpoints.", "neutral"),
-    ("Today's agenda appears quite manageable.", "neutral"),
-    ("The data analysis provides interesting insights.", "neutral"),
-    ("I'm closely monitoring the ongoing developments.", "neutral"),
-    ("The lecture covered a wide range of topics.", "neutral"),
-    ("The atmosphere feels somewhat routine.", "neutral"),
-    ("There's a need for additional information.", "neutral"),
-    ("This decision requires careful consideration.", "neutral"),
-    ("I'm frustrated by the lack of communication.", "negative"),
-    ("The service at this establishment was atrocious.", "negative"),
-    ("I'm deeply unsatisfied with the product's quality.", "negative"),
-    ("The customer experience was extremely disappointing.", "negative"),
-    ("I'm fatigued by these continual setbacks.", "negative"),
-    ("The movie fell far short of expectations.", "negative"),
-    ("I'm aggravated by the constant disruptions.", "negative"),
-    ("This strategy is flawed and impracticable.", "negative"),
-    ("I'm feeling disheartened due to recent events.", "negative"),
-    ("The current situation looks bleak and worrisome.", "negative"),
-    ("The presentation was incredibly inspiring and informative.", "positive"),
-    ("I'm thrilled with the outcome of our collaborative effort.", "positive"),
-    ("This play is a testament to exceptional storytelling.", "positive"),
-    ("The hike offered breathtaking views of nature's beauty.", "positive"),
-    ("I'm delighted about the progress we've achieved.", "positive"),
-    ("The support I received was remarkably encouraging.", "positive"),
-    ("I'm thankful for your unwavering dedication.", "positive"),
-    ("The seminar was enlightening and thought-provoking.", "positive"),
-    ("The beach vacation was immensely relaxing and rejuvenating.", "positive"),
-    ("I'm amazed by the innovative approach taken here.", "positive"),
-    ("The current situation seems relatively stable.", "neutral"),
-    ("I'll examine the details at a later time.", "neutral"),
-    ("The discussion covered a broad spectrum of ideas.", "neutral"),
-    ("Today's schedule seems quite manageable.", "neutral"),
-    ("The data analysis offers intriguing insights.", "neutral"),
-    ("I'm closely observing the ongoing developments.", "neutral"),
-    ("The lecture encompassed various perspectives.", "neutral"),
-    ("The atmosphere feels fairly routine.", "neutral"),
-    ("There's a requirement for further information.", "neutral"),
-    ("This decision involves several considerations.", "neutral"),
-    ("I'm frustrated by the lack of progress in this project.", "negative"),
-    ("The service at this venue was absolutely terrible.", "negative"),
-    ("I'm deeply disappointed with the quality of this product.", "negative"),
-    ("The customer service experience was utterly unsatisfactory.", "negative"),
-    ("I'm exhausted by these persistent setbacks.", "negative"),
-    ("The movie fell far below my expectations.", "negative"),
-    ("I'm irritated by the continuous interruptions.", "negative"),
-    ("This plan is fundamentally flawed and impractical.", "negative"),
-    ("I'm feeling disheartened due to recent setbacks.", "negative"),
-    ("The current situation appears bleak and concerning.", "negative"),
-    ("The new restaurant in town serves exceptional dishes.", "positive"),
-    ("I'm ecstatic about the progress we've made on the project.", "positive"),
-    ("This book is a masterpiece of storytelling.", "positive"),
-    ("The mountain hike offered awe-inspiring vistas.", "positive"),
-    ("I'm overjoyed about the opportunity to travel.", "positive"),
-    ("The assistance provided was incredibly supportive.", "positive"),
-    ("I'm grateful for your consistent encouragement.", "positive"),
-    ("The conference was both informative and engaging.", "positive"),
-    ("The weekend getaway was wonderfully relaxing.", "positive"),
-    ("I'm impressed by the ingenuity displayed here.", "positive"),
-    ("The current scenario seems quite balanced.", "neutral"),
-    ("I'll review the details at a more convenient time.", "neutral"),
-    ("The discussion encompassed various aspects.", "neutral"),
-    ("Today's agenda appears fairly manageable.", "neutral"),
-    ("The data analysis presents intriguing insights.", "neutral"),
-    ("I'm closely monitoring the ongoing progress.", "neutral"),
-    ("The lecture covered a wide array of topics.", "neutral"),
-    ("The atmosphere feels somewhat typical.", "neutral"),
-    ("There's a need for additional clarification.", "neutral"),
-    ("This decision requires thorough consideration.", "neutral"),
-    ("I'm frustrated with the lack of development in this project.", "negative"),
-    ("The service at this establishment was utterly disappointing.", "negative"),
-    ("I'm deeply dissatisfied with the quality of this product.", "negative"),
-    ("The customer service experience was exceptionally poor.", "negative"),
-    ("I'm worn out by these persistent challenges.", "negative"),
-    ("The movie failed to meet even basic expectations.", "negative"),
-    ("I'm annoyed by the constant disruptions.", "negative"),
-    ("This strategy is fundamentally flawed.", "negative"),
-    ("I'm feeling disheartened due to recent setbacks.", "negative"),
-    ("The current situation appears bleak and uncertain.", "negative"),
-    ("I love this song so much, it always makes me happy.", "positive"),
-    ("This is a very informative article, thank you for sharing.", "positive"),
-    ("You are such a kind and generous person, I appreciate your help.", "positive"),
-    ("Congratulations on your promotion, you deserve it.", "positive"),
-    ("This cake is delicious, you are an amazing baker.", "positive"),
-    ("I had a great time at the party, it was so much fun.", "positive"),
-    ("You have a beautiful smile, it brightens my day.", "positive"),
-    ("This book is a masterpiece, I couldn't put it down.", "positive"),
-    ("You are very talented, I admire your skills.", "positive"),
-    ("This is the best gift ever, thank you so much.", "positive"),
-    ("I have no opinion on this matter, it doesn't concern me.", "neutral"),
-    ("This is a factual statement, it can be verified by evidence.", "neutral"),
-    ("The weather is cloudy today, it might rain later.", "neutral"),
-    ("This is a common problem, it happens to many people.", "neutral"),
-    ("This is a neutral color, it goes well with anything.", "neutral"),
-    ("I don't know the answer to this question, it is beyond my knowledge.", "neutral"),
-    ("This is a standard procedure, it follows the rules.", "neutral"),
-    ("The price is reasonable, it matches the quality.", "neutral"),
-    ("This is an average score, it is neither good nor bad.", "neutral"),
-    ("This is a simple task, it doesn't require much effort.", "neutral"),
-    ("I hate this movie so much, it always makes me angry.", "negative"),
-    ("This is a very misleading article, it is full of lies.", "negative"),
-    ("You are such a rude and selfish person, I don't want your help.", "negative"),
-    ("You should be ashamed of yourself, you did a terrible job.", "negative"),
-    ("This cake is disgusting, you are a horrible baker.", "negative"),
-    ("I had a terrible time at the party, it was so boring.", "negative"),
-    ("You have a fake smile, it annoys me.", "negative"),
-    ("This book is a waste of time, I regret reading it.", "negative"),
-    ("You are very incompetent, I pity your skills.", "negative"),
-    ("This is the worst gift ever, I hate it.", "negative"),
-    ("I admire this painting so much, it always inspires me.", "positive"),
-    ("This is a very entertaining podcast, I enjoy listening to it.", "positive"),
-    ("You are such a loyal and trustworthy friend, I value your support.", "positive"),
-    ("You have done a remarkable job, I am proud of you.", "positive"),
-    ("This pizza is amazing, you have a great taste.", "positive"),
-    ("I had a wonderful time at the concert, it was so exhilarating.", "positive"),
-    ("You have a brilliant mind, it fascinates me.", "positive"),
-    ("This game is a lot of fun, I can't stop playing it.", "positive"),
-    ("You are very creative, I love your ideas.", "positive"),
-    ("This is a very thoughtful gesture, I am grateful for it.", "positive"),
-    ("I have no preference on this issue, it doesn't matter to me.", "neutral"),
-    ("This is a mathematical equation, it can be solved by logic.", "neutral"),
-    ("The traffic is heavy today, it might take longer to get there.", "neutral"),
-    ("This is a normal occurrence, it is not unusual.", "neutral"),
-    ("This is a plain shirt, it has no design.", "neutral"),
-    ("I don't remember this fact, it is not important to me.", "neutral"),
-    ("This is a routine check, it is not a cause for alarm.", "neutral"),
-    ("The quality is acceptable, it meets the standards.", "neutral"),
-    ("This is a fair result, it is not biased.", "neutral"),
-    ("This is a basic skill, it doesn't require much training.", "neutral"),
-    ("I despise this show so much, it always annoys me.", "negative"),
-    ("This is a very boring lecture, it puts me to sleep.", "negative"),
-    ("You are such a dishonest and manipulative person, I don't trust you.", "negative"),
-    ("You have failed miserably, I am disappointed in you.", "negative"),
-    ("This soup is awful, you have no clue how to cook.", "negative"),
-    ("I had a horrible time at the meeting, it was so stressful.", "negative"),
-    ("You have a dull personality, it bores me.", "negative"),
-    ("This movie is a disaster, I wish I never watched it.", "negative"),
-    ("You are very lazy, I despise your work ethic.", "negative"),
-    ("This is a very rude comment, I am offended by it.", "negative"),
-    ("I adore this perfume so much, it always makes me feel good.", "positive"),
-    ("This is a very hilarious joke, I can't stop laughing.", "positive"),
-    ("You are such a smart and helpful person, I respect your advice.", "positive"),
-    ("You have achieved a great feat, I am impressed by you.", "positive"),
-    ("This salad is fantastic, you are a healthy eater.", "positive"),
-    ("I had an awesome time at the beach, it was so relaxing.", "positive"),
-    ("You have a charming voice, it delights me.", "positive"),
-    ("This puzzle is very challenging, I enjoy solving it.", "positive"),
-    ("You are very courageous, I look up to you.", "positive"),
-    ("This is a very generous offer, I accept it.", "positive"),
-    ("I have no interest in this topic, it doesn't appeal to me.", "neutral"),
-    ("This is a scientific fact, it can be proven by experiments.", "neutral"),
-    ("The sky is blue today, it is a clear day.", "neutral"),
-    ("This is a regular event, it is not special.", "neutral"),
-    ("This is a solid color, it has no pattern.", "neutral"),
-    ("I don't care about this issue, it is irrelevant to me.", "neutral"),
-    ("This is a standard format, it is easy to read.", "neutral"),
-    ("The service is satisfactory, it does the job.", "neutral"),
-    ("This is a balanced opinion, it is not extreme.", "neutral"),
-    ("This is a common knowledge, it is not surprising.", "neutral"),
-    ("I loathe this product so much, it always disappoints me.", "negative"),
-    ("This is a very annoying noise, it hurts my ears.", "negative"),
-    ("You are such a mean and arrogant person, I don't like you.", "negative"),
-    ("You have wasted a lot of time, I am angry with you.", "negative"),
-    ("This coffee is bitter, you have no sense of taste.", "negative"),
-    ("I had a dreadful time at the cinema, it was so noisy.", "negative"),
-    ("You have a harsh tone, it irritates me.", "negative"),
-    ("This song is terrible, I regret listening to it.", "negative"),
-    ("You are very clumsy, I can't stand your mistakes.", "negative"),
-    ("This is a very insulting remark, I resent it.", "negative"),
-    ("I cherish this memory so much, it always makes me nostalgic.", "positive"),
-    ("This is a very inspiring story, I admire the protagonist.", "positive"),
-    ("You are such a funny and friendly person, I enjoy your company.", "positive"),
-    ("You have made a lot of progress, I am happy for you.", "positive"),
-    ("This sandwich is superb, you are a skilled chef.", "positive"),
-    ("I had a splendid time at the museum, it was so educational.", "positive"),
-    ("You have a wonderful sense of humor, it makes me laugh.", "positive"),
-    ("This app is very useful, I appreciate its features.", "positive"),
-    ("You are very compassionate, I feel your empathy.", "positive"),
-    ("This is a very nice compliment, I thank you for it.", "positive"),
-    ("I have no emotion about this situation, it doesn't affect me.", "neutral"),
-    ("This is a historical fact, it can be confirmed by sources.", "neutral"),
-    ("The temperature is mild today, it is not too hot or cold.", "neutral"),
-    ("This is a regular customer, he is not new or old.", "neutral"),
-    ("This is a striped shirt, it has two colors.", "neutral"),
-    ("I don't have a preference for this choice, it is up to you.", "neutral"),
-    ("This is a common format, it is compatible with most devices.", "neutral"),
-    ("The speed is moderate, it is neither fast nor slow.", "neutral"),
-    ("This is a reasonable opinion, it is not irrational.", "neutral"),
-    ("This is a familiar knowledge, it is not unknown.", "neutral"),
-    ("I detest this smell so much, it always makes me nauseous.", "negative"),
-    ("This is a very dull speech, it bores me to death.", "negative"),
-    ("You are such a cruel and hateful person, I fear you.", "negative"),
-    ("You have caused a lot of trouble, I am furious with you.", "negative"),
-    ("This tea is bland, you have no flavor.", "negative"),
-    ("I had a miserable time at the mall, it was so crowded.", "negative"),
-    ("You have a monotonous voice, it puts me to sleep.", "negative"),
-    ("This article is a mess, I regret reading it.", "negative"),
-    ("You are very stubborn, I hate your attitude.", "negative"),
-    ("This is a very harsh criticism, I reject it.", "negative"),
-    ("The show was an absolute delight from start to finish.", "positive"),
-    ("I'm thrilled with the progress we've made together.", "positive"),
-    ("This painting is a true masterpiece of creativity.", "positive"),
-    ("The view from the summit was breathtakingly beautiful.", "positive"),
-    ("I'm elated about the new opportunities on the horizon.", "positive"),
-    ("The guidance provided was immensely helpful.", "positive"),
-    ("I'm appreciative of your continuous support.", "positive"),
-    ("The workshop was both enlightening and inspiring.", "positive"),
-    ("The spa retreat was incredibly rejuvenating.", "positive"),
-    ("I'm amazed by the innovation displayed in this project.", "positive"),
-    ("The current situation appears reasonably stable.", "neutral"),
-    ("I'll examine the details at a more suitable time.", "neutral"),
-    ("The discussion covered diverse aspects.", "neutral"),
-    ("Today's schedule seems quite manageable.", "neutral"),
-    ("The data analysis yields interesting insights.", "neutral"),
-    ("I'm closely monitoring the ongoing progress.", "neutral"),
-    ("The lecture encompassed various viewpoints.", "neutral"),
-    ("The atmosphere feels somewhat routine.", "neutral"),
-    ("There's a need for further information.", "neutral"),
-    ("This decision involves multiple considerations.", "neutral"),
-    ("I'm frustrated by the lack of development in this matter.", "negative"),
-    ("The service at this establishment was utterly abysmal.", "negative"),
-    ("I'm deeply dissatisfied with the quality of this product.", "negative"),
-    ("The customer service experience was exceptionally disappointing.", "negative"),
-    ("I'm exhausted by these persistent setbacks.", "negative"),
-    ("The movie failed to meet even the most basic expectations.", "negative"),
-    ("I'm annoyed by the constant interruptions.", "negative"),
-    ("This plan is fundamentally flawed and impractical.", "negative"),
-    ("I'm feeling disheartened due to recent setbacks.", "negative"),
-    ("The current situation appears grim and uncertain.", "negative")
-]
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String(500), nullable=False)
+    expected = db.Column(db.String(20), nullable=False)
+    displayed = db.Column(db.String(20), nullable=False)
+
+
+with app.app_context():
+    db.create_all()
 
 texts = [text for text, sentiment in data]
 sentiments = [sentiment for text, sentiment in data]
@@ -325,10 +39,11 @@ sentiment_dict = {"positive": 0, "neutral": 1, "negative": 2}
 sentiments_numerical = [sentiment_dict[sentiment] for sentiment in sentiments]
 sentiments_one_hot = to_categorical(sentiments_numerical)
 
-X_train, X_test, y_train, y_test = train_test_split(padded_sequences, sentiments_one_hot, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(padded_sequences, sentiments_one_hot, test_size=0.2,
+                                                    random_state=42)
 
 model = Sequential()
-model.add(Embedding(input_dim=len(tokenizer.word_index)+1, output_dim=128))
+model.add(Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=128))
 model.add(Bidirectional(LSTM(128)))
 model.add(Dense(3, activation='softmax'))
 
@@ -337,6 +52,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
 
 reverse_sentiment_dict = {0: "positive", 1: "neutral", 2: "negative"}
+
 
 # user_text = input("Enter text: ")
 # user_sequence = tokenizer.texts_to_sequences([user_text])
@@ -352,6 +68,7 @@ reverse_sentiment_dict = {0: "positive", 1: "neutral", 2: "negative"}
 def home():
     return render_template('index.html')
 
+
 @app.route('/predict', methods=['POST'])
 def predict():
     user_text = request.form['text']
@@ -363,6 +80,22 @@ def predict():
     max_index = np.argmax(user_prediction)
     predicted_sentiment = reverse_sentiment_dict[max_index]
     return jsonify({'sentiment': predicted_sentiment, 'probabilities': user_prediction.tolist()})
+
+
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    feedback = Feedback(text=request.form['text'], expected=request.form['expected'],
+                        displayed=request.form['displayed'])
+    db.session.add(feedback)
+    db.session.commit()
+    return jsonify({'message': 'Feedback submitted'})
+
+
+@app.route('/feedbacks')
+def feedbacks():
+    feedbacks = Feedback.query.all()
+    return render_template('feedbacks.html', feedbacks=feedbacks)
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)

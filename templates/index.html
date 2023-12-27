@@ -2,35 +2,85 @@
 <html>
 <head>
     <title>Sentiment Predictor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
-    <form id="predict-form">
-        <textarea id="text-input"></textarea>
-    </form>
-    <div id="sentiment"></div>
-    <div id="positive"></div>
-    <div id="neutral"></div>
-    <div id="negative"></div>
-    <p>v1.0</p>
+    <div class="container">
+        <h1 class="text-center my-4">Sentiment Predictor</h1>
+        <form id="predict-form" class="mb-4">
+            <div class="form-group">
+                <textarea id="text-input" class="form-control" rows="3"></textarea>
+            </div>
+        </form>
+        <div id="sentiment" class="alert alert-primary" role="alert"></div>
+        <div id="positive" class="alert alert-success" role="alert"></div>
+        <div id="neutral" class="alert alert-warning" role="alert"></div>
+        <div id="negative" class="alert alert-danger" role="alert"></div>
+        <p class="text-center my-4">v1.5</p>
+        <button id="feedback-button" class="btn btn-primary">Give Feedback</button>
+        <div id="feedback-form" style="display: none;">
+            <h2>Feedback</h2>
+            <form id="feedback">
+                <label for="feedback-text">Text:</label><br>
+                <p id="feedback-text"></p>
+                <label for="expected">Expected Sentiment:</label><br>
+                <select id="expected" name="expected">
+                    <option value="positive">Positive</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="negative">Negative</option>
+                </select><br>
+                <label for="displayed-sentiment">Displayed Sentiment:</label><br>
+                <p id="displayed-sentiment"></p>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+    </div>
 
     <script>
     $(document).ready(function() {
         $('#text-input').on('input', function() {
             var text = $(this).val();
+            $('#feedback-text').text(text);
             $.ajax({
                 url: '/predict',
                 method: 'POST',
                 data: {text: text},
                 success: function(response) {
                     $('#sentiment').text(response.sentiment);
+                    $('#displayed-sentiment').text(response.sentiment);
                     $('#positive').text('Positive: ' + (response.probabilities[0] * 100).toFixed(2) + '%');
                     $('#neutral').text('Neutral: ' + (response.probabilities[1] * 100).toFixed(2) + '%');
                     $('#negative').text('Negative: ' + (response.probabilities[2] * 100).toFixed(2) + '%');
                 }
             });
         });
+
+        $('#feedback-button').click(function() {
+            $('#feedback-form').toggle();
+        });
+
+        $('#feedback').off('submit').on('submit', function(e) {
+            e.preventDefault();
+            var expectedSentiment = $('#expected').val();
+            var displayedSentiment = $('#displayed-sentiment').text();
+            if (expectedSentiment == displayedSentiment) {
+                alert('Error: expected sentiment and displayed have equal embedded value');
+                return false;;
+            }
+            var feedback = {
+                text: $('#feedback-text').text(),
+                expected: expectedSentiment,
+                displayed: displayedSentiment
+            };
+            $.post('/feedback', feedback, function(data) {
+                alert('Feedback submitted');
+                $('#feedback-form').hide();
+                $('#feedback select').prop('selectedIndex',0);
+            });
+            return false;
+        });
     });
-</script>
+    </script>
 </body>
 </html>
