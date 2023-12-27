@@ -1,20 +1,19 @@
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Bidirectional
-from tensorflow.keras.utils import to_categorical
+import torch
+from torch import nn
+from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
-import numpy as np
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 import os
 from data import data
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+import numpy as np
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'test.db')
 db = SQLAlchemy(app)
-
 
 class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,43 +25,98 @@ class Feedback(db.Model):
 with app.app_context():
     db.create_all()
 
+
+def pad_sequences(sequences, padding='post'):
+    # Get the length of the longest sequence
+    max_len = max(len(seq) for seq in sequences)
+
+    # Create a new list of sequences
+    padded_sequences = []
+
+    for seq in sequences:
+        # Get the number of zeros to pad
+        num_padding = max_len - len(seq)
+
+        if padding == 'post':
+            # Pad the sequence with zeros at the end
+            padded_seq = seq + [0] * num_padding
+        else:
+            # Pad the sequence with zeros at the beginning
+            padded_seq = [0] * num_padding + seq
+
+        # Add the padded sequence to the new list
+        padded_sequences.append(padded_seq)
+
+    return padded_sequences
+
+class SentimentDataset(Dataset):
+    def __init__(self, sequences, sentiments):
+        self.sequences = sequences
+        self.sentiments = sentiments
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, idx):
+        return torch.tensor(self.sequences[idx]), torch.tensor(self.sentiments[idx])
+
 texts = [text for text, sentiment in data]
 sentiments = [sentiment for text, sentiment in data]
 
-tokenizer = Tokenizer(oov_token="<OOV>")
-tokenizer.fit_on_texts(texts)
+sentiment_dict = {'positive': 0, 'neutral': 1, 'negative': 2}
 
-sequences = tokenizer.texts_to_sequences(texts)
+tokenizer = get_tokenizer('basic_english')
+tokenized_texts = [tokenizer(text) for text in texts]
+vocab = build_vocab_from_iterator(tokenized_texts)
+
+UNK_TOKEN = "<unk>"
+
+if UNK_TOKEN not in vocab:
+    vocab.append_token(UNK_TOKEN)
+
+vocab.set_default_index(vocab[UNK_TOKEN])
+sequences = [[vocab[token] for token in text] for text in tokenized_texts]
 padded_sequences = pad_sequences(sequences, padding='post')
 
-sentiment_dict = {"positive": 0, "neutral": 1, "negative": 2}
 sentiments_numerical = [sentiment_dict[sentiment] for sentiment in sentiments]
-sentiments_one_hot = to_categorical(sentiments_numerical)
+sentiments_one_hot = np.eye(len(sentiment_dict))[sentiments_numerical]
+
+reverse_sentiment_dict = {i: sentiment for sentiment, i in sentiment_dict.items()}
 
 X_train, X_test, y_train, y_test = train_test_split(padded_sequences, sentiments_one_hot, test_size=0.2,
                                                     random_state=42)
 
-model = Sequential()
-model.add(Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=128))
-model.add(Bidirectional(LSTM(128)))
-model.add(Dense(3, activation='softmax'))
+train_data = SentimentDataset(X_train, y_train)
+test_data = SentimentDataset(X_test, y_test)
 
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
+test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+class SentimentModel(nn.Module):
+    def __init__(self, vocab_size, output_size, embedding_dim, hidden_dim, n_layers):
+        super(SentimentModel, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, n_layers, batch_first=True, bidirectional=True)
+        self.fc = nn.Linear(hidden_dim * 2, output_size)
+        self.softmax = nn.Softmax(dim=1)
 
-reverse_sentiment_dict = {0: "positive", 1: "neutral", 2: "negative"}
+    def forward(self, x):
+        embeds = self.embedding(x)
+        lstm_out, _ = self.lstm(embeds)
+        out = self.fc(lstm_out[:, -1, :])
+        return self.softmax(out)
 
+model = SentimentModel(len(vocab) + 2, 3, 128, 128, 1)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters())
 
-# user_text = input("Enter text: ")
-# user_sequence = tokenizer.texts_to_sequences([user_text])
-# user_padded_sequence = pad_sequences(user_sequence, padding='post')
-# user_prediction = model.predict(user_padded_sequence)
-# print(user_prediction)
-# max_index = np.argmax(user_prediction)
-# predicted_sentiment = reverse_sentiment_dict[max_index]
-# print(predicted_sentiment)
-
+for epoch in range(10):
+    for inputs, labels in train_loader:
+        optimizer.zero_grad()
+        output = model(inputs)
+        loss = criterion(output, labels)
+        loss.backward()
+        optimizer.step()
 
 @app.route('/')
 def home():
@@ -74,9 +128,10 @@ def predict():
     user_text = request.form['text']
     if user_text == '':
         return jsonify({'sentiment': 'Please enter text', 'probabilities': [0, 0, 0]})
-    user_sequence = tokenizer.texts_to_sequences([user_text])
-    user_padded_sequence = pad_sequences(user_sequence, padding='post')
-    user_prediction = model.predict(user_padded_sequence)[0]
+    user_sequence = [vocab[token] for token in tokenizer(user_text)]
+    user_padded_sequence = pad_sequences([user_sequence], padding='post')
+    user_tensor = torch.tensor(user_padded_sequence)
+    user_prediction = model(user_tensor).detach().numpy()[0]
     max_index = np.argmax(user_prediction)
     predicted_sentiment = reverse_sentiment_dict[max_index]
     return jsonify({'sentiment': predicted_sentiment, 'probabilities': user_prediction.tolist()})
