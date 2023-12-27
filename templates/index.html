@@ -9,21 +9,28 @@
         <textarea id="text-input"></textarea>
     </form>
     <div id="sentiment"></div>
+    <div id="positive"></div>
+    <div id="neutral"></div>
+    <div id="negative"></div>
+    <p>v1.0</p>
 
     <script>
-        $(document).ready(function() {
-            $('#text-input').on('input', function() {
-                var text = $(this).val();
-                $.ajax({
-                    url: '/predict',
-                    method: 'POST',
-                    data: {text: text},
-                    success: function(response) {
-                        $('#sentiment').text(response.sentiment);
-                    }
-                });
+    $(document).ready(function() {
+        $('#text-input').on('input', function() {
+            var text = $(this).val();
+            $.ajax({
+                url: '/predict',
+                method: 'POST',
+                data: {text: text},
+                success: function(response) {
+                    $('#sentiment').text(response.sentiment);
+                    $('#positive').text('Positive: ' + (response.probabilities[0] * 100).toFixed(2) + '%');
+                    $('#neutral').text('Neutral: ' + (response.probabilities[1] * 100).toFixed(2) + '%');
+                    $('#negative').text('Negative: ' + (response.probabilities[2] * 100).toFixed(2) + '%');
+                }
             });
         });
-    </script>
+    });
+</script>
 </body>
 </html>
