@@ -3,6 +3,7 @@
 <head>
     <title>Sentiment Predictor</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
@@ -17,7 +18,7 @@
         <div id="positive" class="alert alert-success" role="alert"></div>
         <div id="neutral" class="alert alert-warning" role="alert"></div>
         <div id="negative" class="alert alert-danger" role="alert"></div>
-        <p class="text-center my-4">v1.51</p>
+        <div id="version"><a href="/version">Senti2.0</a> by <strong>Ethan Yan Xu</strong> | website version 0.3.1</div>
         <button id="feedback-button" class="btn btn-primary">Give Feedback</button>
         <div id="feedback-form" style="display: none;">
             <h2>Feedback</h2>
@@ -62,14 +63,19 @@
 
         $('#feedback').off('submit').on('submit', function(e) {
             e.preventDefault();
+            var text = $('#feedback-text').text();
             var expectedSentiment = $('#expected').val();
             var displayedSentiment = $('#displayed-sentiment').text();
-            if (expectedSentiment == displayedSentiment) {
+            if (expectedSentiment === displayedSentiment) {
                 alert('Error: expected sentiment and displayed have equal embedded value');
-                return false;;
+                return false;
+            }
+            if (text.trim() === '') {
+                alert('Error: trimmed text is empty');
+                return false;
             }
             var feedback = {
-                text: $('#feedback-text').text(),
+                text: text,
                 expected: expectedSentiment,
                 displayed: displayedSentiment
             };
