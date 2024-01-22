@@ -1,42 +1,64 @@
-# Sentiment Analysis Web Application
+# LSTMSentimentModel API
 
-This project is a sentiment analysis web application built with Python, Flask, and TensorFlow. It uses a pre-trained model to predict the sentiment (positive, neutral, or negative) of user-provided text. The application also handles negations in the text to improve the accuracy of the sentiment prediction.
+The LSTMSentimentModel API is a sentiment analysis service that uses a Long Short-Term Memory (LSTM) model to predict the sentiment of a given text. The API is built with Python and Flask and uses the TensorFlow library for the LSTM model.
 
-## Features
+## Endpoints
 
-- **Sentiment Prediction**: The application uses a pre-trained TensorFlow model to predict the sentiment of user-provided text.
-- **Negation Handling**: The application handles negations in the text to improve the accuracy of the sentiment prediction.
-- **Web Interface**: The application provides a user-friendly web interface for users to input text and view the predicted sentiment.
-- **Feedback System**: Users can provide feedback on the predicted sentiment. This feedback is stored in a database and can be viewed on a separate page of the web application.
-- **Google Cloud App Engine Deployment**: The application is designed to be deployed on Google Cloud App Engine.
+### POST /lstmPredict
 
-## Installation
+This endpoint accepts a JSON object with a single key-value pair. The key should be 'text' and the value should be the text for which you want to predict the sentiment.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/OoEthanoO/SentimentAnalysisWebApp.git
+#### Request
+
+```json
+{
+    "text": "your text here"
+}
 ```
-2. Navigate to the project directory:
-```bash
-cd SentimentAnalysisWebApp
+
+#### Response
+
+The response is a JSON object that includes the predicted sentiment and the probabilities for each sentiment category (positive, neutral, negative).
+
+```json
+{
+    "sentiment": "predicted sentiment",
+    "probabilities": [probability for positive, probability for neutral, probability for negative]
+}
 ```
-3. Install the required Python packages:
-```bash
-pip install -r requirements.txt
+
+### POST /lstmVersion
+
+This endpoint returns a summary of the LSTM model used for sentiment prediction.
+
+#### Request
+
+No parameters are required for this request.
+
+#### Response
+
+The response is a JSON object that includes a summary of the LSTM model.
+
+```json
+{
+    "summary": "model summary"
+}
 ```
-4. Run the application:
-```bash
-python website.py
+
+## Error Handling
+
+If an error occurs while processing the request, the API will return a JSON object with an 'error' key and a description of the error as the value.
+
+```json
+{
+    "error": "description of the error"
+}
 ```
 
 ## Usage
 
-Open your web browser and navigate to `http://localhost:3000`. Enter your text in the input field and click the "Predict" button to get the sentiment prediction.
+To use this API, you can send a POST request to the appropriate endpoint with the required parameters. The API will return a JSON response with the predicted sentiment or model summary.
 
-## Contributing
+## Note
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Feedbacks
-
-Feedbacks can be submitted on the website. 
+This API is designed to handle negations in the input text. It will prepend 'NOT_' to any word that follows a negation word until the next punctuation mark. This helps the model to better understand the sentiment of the text.
