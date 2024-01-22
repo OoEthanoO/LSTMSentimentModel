@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sentiment Predictor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center my-4">Sentiment Predictor</h1>
+        <form id="predict-form" class="mb-4">
+            <div class="form-group">
+                <textarea id="text-input" class="form-control" rows="3"></textarea>
+            </div>
+        </form>
+        <div id="sentiment" class="alert alert-primary" role="alert"></div>
+        <div id="positive" class="alert alert-success" role="alert"></div>
+        <div id="neutral" class="alert alert-warning" role="alert"></div>
+        <div id="negative" class="alert alert-danger" role="alert"></div>
+        <div id="version"><a href="/lstmVersion">LSTMSenti2.1.1.1Class_Weighted</a> by <strong>Ethan Yan Xu</strong> | website version 0.4.3</div>
+        <div id="warning">This model is meant to determine the sentiment of customer reviews</div>
+    </div>
+
+    <script>
+    $(document).ready(function() {
+        var timeout = null;
+
+        $('#text-input').on('input', function() {
+            var text = $(this).val();
+            $('#feedback-text').text(text);
+
+            clearTimeout(timeout);
+
+            $('#sentiment').text('Processing...');
+            $('#positive').text('');
+            $('#neutral').text('');
+            $('#negative').text('');
+
+            timeout = setTimeout(function() {
+                $.ajax({
+                    url: '/lstmPredict',
+                    method: 'POST',
+                    data: {text: text},
+                    success: function(response) {
+                        $('#sentiment').text(response.sentiment);
+                        $('#displayed-sentiment').text(response.sentiment);
+                        $('#positive').text('Positive: ' + (response.probabilities[0] * 100).toFixed(2) + '%');
+                        $('#neutral').text('Neutral: ' + (response.probabilities[1] * 100).toFixed(2) + '%');
+                        $('#negative').text('Negative: ' + (response.probabilities[2] * 100).toFixed(2) + '%');
+                    }
+                });
+            }, 300);
+        });
+    });
+    </script>
+</body>
+</html>
